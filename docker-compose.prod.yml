@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Scorella API
+  api:
+    build: ./scorella-api
+    container_name: scorella_api
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: scorella
+      DB_PASSWORD: scorella_password
+      DB_DATABASE: scorella_db
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      # App
+      PORT: 3000
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - scorella_net
+
+  # PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: scorella_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: scorella
+      POSTGRES_PASSWORD: scorella_password
+      POSTGRES_DB: scorella_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - scorella_net
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: scorella_redis
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - scorella_net
+
+networks:
+  scorella_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
