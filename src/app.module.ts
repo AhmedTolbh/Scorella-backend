@@ -10,6 +10,9 @@ import { CommentsModule } from './comments/comments.module';
 import { GroupsModule } from './groups/groups.module';
 import { ReportsModule } from './reports/reports.module';
 import { HealthController } from './health/health.controller';
+import { RecommendationsModule } from './recommendations/recommendations.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { ParentalModule } from './parental/parental.module';
 
 @Module({
   imports: [
@@ -30,8 +33,12 @@ import { HealthController } from './health/health.controller';
     CommentsModule,
     GroupsModule,
     ReportsModule,
+    RecommendationsModule,
+    AnalyticsModule,
+    ParentalModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
 })
 export class AppModule {}
+

@@ -45,6 +45,12 @@ export class Video {
   @Column({ default: 0 })
   height: number;
 
+  @Column({ default: 0 })
+  viewCount: number;
+
+  @Column({ default: 0 })
+  likeCount: number;
+
   // Moderation & Visibility
   @Column({
     type: 'enum',
