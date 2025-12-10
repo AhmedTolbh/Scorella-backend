@@ -36,6 +36,25 @@ export class UsersService {
     return user;
   }
 
+  async findOneByEmail(email: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { email } });
+  }
+
+  async createWithEmail(data: {
+    email: string;
+    displayName: string;
+    passwordHash: string;
+    ageBucket?: string;
+  }): Promise<User> {
+    const user = this.usersRepository.create({
+      email: data.email,
+      displayName: data.displayName,
+      passwordHash: data.passwordHash,
+      ageBucket: data.ageBucket as AgeBucket,
+    });
+    return this.usersRepository.save(user);
+  }
+
   async setAgeBucket(userId: string, bucket: string): Promise<User> {
     const user = await this.usersRepository.findOneBy({ id: userId });
     if (user) {

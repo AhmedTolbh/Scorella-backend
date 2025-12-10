@@ -19,7 +19,7 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   @Index()
   appleId: string;
 
@@ -37,8 +37,11 @@ export class User {
     enum: AgeBucket,
     nullable: true,
   })
-  @Index() // Indexed for filtering by age
+  @Index()
   ageBucket: AgeBucket;
+
+  @Column({ nullable: true })
+  passwordHash: string;
 
   @Column({ default: true })
   isActive: boolean;
