@@ -1,11 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
 import { Repository, Like } from 'typeorm';
-import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Video } from './entities/video.entity';
-import { v4 as uuidv4 } from 'uuid';
+import { SpacesService } from '../storage/spaces.service';
 import {
   VideoVisibility,
   ModerationStatus,
@@ -13,84 +10,64 @@ import {
 
 @Injectable()
 export class VideosService {
-  private s3Client: S3Client;
   private logger = new Logger(VideosService.name);
-  private bucketName: string;
-  private spacesEndpoint: string;
-  private spacesRegion: string;
 
   constructor(
     @InjectRepository(Video)
     private videosRepository: Repository<Video>,
-    private configService: ConfigService,
+    private spacesService: SpacesService,
   ) {
-    // Config for DigitalOcean Spaces (S3 Compatible)
-    this.spacesEndpoint =
-      this.configService.get<string>('S3_ENDPOINT') || 'https://ams3.digitaloceanspaces.com';
-    this.spacesRegion = this.configService.get<string>('S3_REGION') || 'ams3';
-    this.bucketName =
-      this.configService.get<string>('S3_BUCKET_VIDEOS') || 'scorella-videos';
-
-    this.s3Client = new S3Client({
-      endpoint: this.spacesEndpoint,
-      region: this.spacesRegion,
-      credentials: {
-        accessKeyId: this.configService.get<string>('S3_ACCESS_KEY') || '',
-        secretAccessKey: this.configService.get<string>('S3_SECRET_KEY') || '',
-      },
-      forcePathStyle: false, // Required for DigitalOcean Spaces
-    });
-
-    this.logger.log(
-      `VideosService initialized with bucket: ${this.bucketName} at ${this.spacesEndpoint}`,
-    );
-  }
-
-  /**
-   * Build public URL for DigitalOcean Spaces
-   * Format: https://bucket.region.digitaloceanspaces.com/key
-   */
-  private buildPublicUrl(key: string): string {
-    return `https://${this.bucketName}.${this.spacesRegion}.digitaloceanspaces.com/${key}`;
+    this.logger.log('VideosService initialized with SpacesService');
   }
 
   /**
    * Generate presigned upload URL for video
+   * Uses new SpacesService (no ACL headers)
    */
-  async generatePresignedUrl(userId: string, contentType: string) {
-    const fileId = uuidv4();
-    const extension = contentType.split('/')[1] || 'mov';
-    const key = `raw/${userId}/${fileId}.${extension}`;
+  async generatePresignedUrl(
+    userId: string,
+    contentType: string,
+    fileSize?: number,
+  ) {
+    // Validate inputs
+    this.spacesService.validateContentType(contentType);
+    if (fileSize) {
+      this.spacesService.validateFileSize(fileSize);
+    }
 
-    const command = new PutObjectCommand({
-      Bucket: this.bucketName,
-      Key: key,
-      ContentType: contentType,
-      ACL: 'public-read',
-    });
+    // Extract file extension
+    const extension = contentType.split('/')[1] || 'mp4';
 
-    const uploadUrl = await getSignedUrl(this.s3Client, command, {
-      expiresIn: 3600, // 1 hour
-    });
+    // Generate presigned URL
+    const uploadResult = await this.spacesService.generatePresignedUploadUrl(
+      userId,
+      contentType,
+      extension,
+    );
 
-    // Create 'uploading' Video Record
+    // Create video record in database
     const video = this.videosRepository.create({
       userId: userId,
       status: 'uploading',
-      videoUrl: this.buildPublicUrl(key),
+      videoUrl: uploadResult.publicUrl,
       visibility: VideoVisibility.PUBLIC,
       moderationStatus: ModerationStatus.PENDING,
+      viewCount: 0,
+      likeCount: 0,
     });
 
     await this.videosRepository.save(video);
 
-    this.logger.log(`Generated upload URL for video ${video.id}`);
+    this.logger.log(
+      `Generated upload URL for video ${video.id}, expires in ${uploadResult.expiresIn}s`,
+    );
 
     return {
-      uploadUrl,
+      uploadUrl: uploadResult.uploadUrl,
       videoId: video.id,
-      key: key,
-      publicUrl: video.videoUrl,
+      key: uploadResult.fileKey,
+      publicUrl: uploadResult.publicUrl,
+      expiresIn: uploadResult.expiresIn,
     };
   }
 
@@ -214,4 +191,3 @@ export class VideosService {
     this.logger.log(`Video ${videoId} soft deleted`);
   }
 }
-

@@ -23,16 +23,19 @@ export class VideosController {
   @ApiBody({
     schema: {
       type: 'object',
+      required: ['userId', 'contentType'],
       properties: {
         userId: { type: 'string', format: 'uuid' },
         contentType: { type: 'string', example: 'video/mp4' },
+        fileSize: { type: 'number', example: 10485760, description: 'Optional file size in bytes' },
       },
     },
   })
-  async getUploadUrl(@Body() body: { userId: string; contentType: string }) {
+  async getUploadUrl(@Body() body: { userId: string; contentType: string; fileSize?: number }) {
     return this.videosService.generatePresignedUrl(
       body.userId,
       body.contentType,
+      body.fileSize,
     );
   }
 

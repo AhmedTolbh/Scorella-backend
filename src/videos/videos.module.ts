@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { VideosService } from './videos.service';
 import { VideosController } from './videos.controller';
+import { VideosService } from './videos.service';
 import { Video } from './entities/video.entity';
-import { UsersModule } from '../users/users.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Video]), ConfigModule, UsersModule],
+  imports: [TypeOrmModule.forFeature([Video]), ConfigModule, StorageModule],
   controllers: [VideosController],
   providers: [VideosService],
   exports: [VideosService],

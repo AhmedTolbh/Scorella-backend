@@ -3,6 +3,7 @@ import {
   ConflictException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { AppleLoginDto } from './dto/apple-login.dto';
 import { RegisterDto, LoginDto } from './dto/email-auth.dto';
@@ -10,7 +11,15 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  constructor(private usersService: UsersService) {}
+  constructor(
+    private usersService: UsersService,
+    private jwtService: JwtService,
+  ) {}
+
+  private generateToken(user: any) {
+    const payload = { sub: user.id, email: user.email };
+    return this.jwtService.sign(payload);
+  }
 
   async register(dto: RegisterDto) {
     // Check if email already exists
@@ -32,6 +41,7 @@ export class AuthService {
 
     return {
       message: 'Registration successful',
+      accessToken: this.generateToken(user),
       user: {
         id: user.id,
         email: user.email,
@@ -61,6 +71,7 @@ export class AuthService {
 
     return {
       message: 'Authenticated successfully',
+      accessToken: this.generateToken(user),
       user: {
         id: user.id,
         email: user.email,
@@ -81,9 +92,10 @@ export class AuthService {
       await this.usersService.setAgeBucket(user.id, dto.ageBucket);
     }
 
-    // 4. Return Session (JWT in future)
+    // 4. Return Session with JWT
     return {
       message: 'Authenticated successfully',
+      accessToken: this.generateToken(user),
       user: user,
     };
   }
