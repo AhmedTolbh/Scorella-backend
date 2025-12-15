@@ -146,6 +146,22 @@ export class VideosService {
   }
 
   /**
+   * Get public feed videos (same as findAll for now, can be customized later)
+   */
+  async findPublic() {
+    return this.videosRepository.find({
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+      where: {
+        status: 'ready',
+        visibility: VideoVisibility.PUBLIC,
+        moderationStatus: ModerationStatus.APPROVED,
+      },
+      take: 50, // Limit public feed
+    });
+  }
+
+  /**
    * Get videos by user
    */
   async findByUser(userId: string) {

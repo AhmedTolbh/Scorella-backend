@@ -133,6 +133,31 @@ export class UsersService {
     });
   }
 
+  /**
+   * Get user statistics for profile
+   */
+  async getStats(userId: string) {
+    // Get user with videos
+    const userVideos = await this.videosRepository.find({
+      where: { userId: userId },
+    });
+
+    // Calculate total likes from all user videos
+    const likesCount = userVideos.reduce(
+      (sum, video) => sum + (video.likeCount || 0),
+      0,
+    );
+
+    // For MVP, return basic stats
+    // TODO: Implement followers/following/groups when those features are added
+    return {
+      followersCount: 0, // TODO: Implement followers table
+      followingCount: 0, // TODO: Implement followers table
+      likesCount: likesCount,
+      groupsCount: 0, // TODO: Implement user_groups table
+    };
+  }
+
   async delete(id: string) {
     return this.usersRepository.delete(id);
   }

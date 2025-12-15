@@ -34,6 +34,11 @@ export class UsersController {
     return this.usersService.search(query);
   }
 
+  @Get(':id/stats')
+  getStats(@Param('id') id: string) {
+    return this.usersService.getStats(id);
+  }
+
   @Get(':appleId')
   findOne(@Param('appleId') appleId: string) {
     return this.usersService.findOneByAppleId(appleId);

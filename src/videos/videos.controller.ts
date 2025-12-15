@@ -76,6 +76,12 @@ export class VideosController {
     return this.videosService.search(query);
   }
 
+  @Get('public')
+  @ApiOperation({ summary: 'Get public feed videos' })
+  getPublic() {
+    return this.videosService.findPublic();
+  }
+
   @Get('feed')
   @ApiOperation({ summary: 'Get video feed' })
   findAll() {
