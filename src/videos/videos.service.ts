@@ -134,7 +134,7 @@ export class VideosService {
    * Get all ready videos for feed
    */
   async findAll() {
-    return this.videosRepository.find({
+    const videos = await this.videosRepository.find({
       relations: ['user'],
       order: { createdAt: 'DESC' },
       where: {
@@ -143,6 +143,19 @@ export class VideosService {
         moderationStatus: ModerationStatus.APPROVED,
       },
     });
+
+    // Replace static URLs with presigned URLs
+    return await Promise.all(
+      videos.map(async (video) => {
+        const fileKey = this.extractFileKeyFromUrl(video.videoUrl);
+        if (fileKey) {
+          video.videoUrl = await this.spacesService.generatePresignedDownloadUrl(
+            fileKey,
+          );
+        }
+        return video;
+      }),
+    );
   }
 
   /**
@@ -165,10 +178,23 @@ export class VideosService {
    * Get videos by user
    */
   async findByUser(userId: string) {
-    return this.videosRepository.find({
+    const videos = await this.videosRepository.find({
       where: { userId: userId, status: 'ready' },
       order: { createdAt: 'DESC' },
     });
+
+    // Replace static URLs with presigned URLs
+    return await Promise.all(
+      videos.map(async (video) => {
+        const fileKey = this.extractFileKeyFromUrl(video.videoUrl);
+        if (fileKey) {
+          video.videoUrl = await this.spacesService.generatePresignedDownloadUrl(
+            fileKey,
+          );
+        }
+        return video;
+      }),
+    );
   }
 
   /**
@@ -205,5 +231,19 @@ export class VideosService {
     const video = await this.findOne(videoId);
     await this.videosRepository.softDelete(video.id);
     this.logger.log(`Video ${videoId} soft deleted`);
+  }
+
+  /**
+   * Extract S3 file key from public URL
+   * Example: https://bucket.region.digitaloceanspaces.com/raw/userId/fileId.mp4 -> raw/userId/fileId.mp4
+   */
+  private extractFileKeyFromUrl(url: string): string | null {
+    try {
+      const urlObj = new URL(url);
+      // Remove leading slash
+      return urlObj.pathname.substring(1);
+    } catch {
+      return null;
+    }
   }
 }
